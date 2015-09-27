@@ -1,5 +1,4 @@
-136.199.51.110;ssds110.dbnet.syssoft.uni-trier.de;master
-136.199.51.111;ssds111.dbnet.syssoft.uni-trier.de;
-136.199.51.112;ssds112.dbnet.syssoft.uni-trier.de;
+136.199.51.110;ssds110.dbnet.syssoft.uni-trier.de 136.199.51.111;ssds111.dbnet.syssoft.uni-trier.de;
+136.199.51.112;ssds112.dbnet.syssoft.uni-trier.de;master
 136.199.51.113;ssds113.dbnet.syssoft.uni-trier.de;slave
 136.199.51.114;ssds114.dbnet.syssoft.uni-trier.de
