@@ -1,7 +1,0 @@
-<configuration>
-    <property>
-        <name>fs.defaultFS</name>
-                <value>hdfs://136.199.51.113:8020/</value>
-        <description>NameNode URI</description>
-    </property>
-</configuration>
