@@ -5,10 +5,6 @@
         <description>Minimum limit of memory to allocate to each container request at the Resource Manager.</description>
     </property>
     <property>
-        <name>yarn.nodenamager.vmem-pmem-ratio</name>
-        <value>3</value>
-    </property>
-    <property>
         <name>yarn.scheduler.maximum-allocation-mb</name>
         <value>2048</value>
         <description>Maximum limit of memory to allocate to each container request at the Resource Manager.</description>
@@ -27,6 +23,11 @@
         <name>yarn.nodemanager.resource.memory-mb</name>
         <value>4096</value>
         <description>Physical memory, in MB, to be made available to running containers</description>
+    </property>
+    <property>
+        <name>yarn.nodenamager.vmem-pmem-ratio</name>
+        <value>3</value>
+	<description>The total amount of virtual memory may exceed its physical memory usage by this ratio.</description>
     </property>
     <property>
         <name>yarn.nodemanager.resource.cpu-vcores</name>
