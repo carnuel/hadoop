@@ -220,6 +220,12 @@ log 0 "SSH started."
 
 # ip of this host
 var_ip="$(ifconfig | grep -A 1 'eth0' | tail -1 | cut -d ':' -f 2 | cut -d ' ' -f 1)"
+
+# Start editing /etc/hosts in a temporary file
+# Remove 127.0.1.1
+sed "s/127.0.1.1/$var_ip/" /etc/hosts > /tmp/hosts
+log 0 "Changed 127.0.1.1 to $var_ip."
+
 # Create the master entry for /etc/hosts
 master_entry=$(printf "$master_ip\t$master_hostname")
 
@@ -230,15 +236,18 @@ if [[ $mode == "-master" ]]; then
 		log 3 "Tried to start the master host on the wrong machine. Check the cluster configuration."
 		terminate true
 	fi
+
 	# Add all slaves to /etc/hosts
 	for slave_entry in  "${slaves[@]}"
         do
-		if [[ $slave_entry != $master_entry ]]; then
-			# Add slave host to /etc/hosts
-			echo "${slave_entry}" >> /etc/hosts
-			log 0 "$slave_entry added to /etc/hosts."
-		fi
+		# Add slave host to /etc/hosts
+		echo "${slave_entry}" >> /tmp/hosts
+		log 0 "$slave_entry added to /tmp/hosts."
         done
+
+	# Replace the original /etc/hosts
+        cp /tmp/hosts /etc/hosts
+	log 0 "Replaced /etc/hosts."
 
 	# Formatting namenode, starting namenode and resourcemanager
         $HADOOP_PREFIX/bin/hdfs namenode -format -force
@@ -255,8 +264,12 @@ elif [[ $mode == "-slave" ]]; then
                 terminate true
         fi
 	# Add the master host to /etc/hosts
-        echo "${master_entry}" >> /etc/hosts
-	log 0 "$master_entry added to /etc/hosts."
+        echo "${master_entry}" >> /tmp/hosts
+	log 0 "$master_entry added to /tmp/hosts."
+
+	 # Replace the original /etc/hosts
+        cp /tmp/hosts /etc/hosts
+        log 0 "Replaced /etc/hosts."
 
 	# Starting datanode and nodemanager
 	$HADOOP_PREFIX/sbin/hadoop-daemon.sh start datanode

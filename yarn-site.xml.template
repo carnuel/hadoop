@@ -5,6 +5,10 @@
         <description>Minimum limit of memory to allocate to each container request at the Resource Manager.</description>
     </property>
     <property>
+        <name>yarn.nodenamager.vmem-pmem-ratio</name>
+        <value>3</value>
+    </property>
+    <property>
         <name>yarn.scheduler.maximum-allocation-mb</name>
         <value>2048</value>
         <description>Maximum limit of memory to allocate to each container request at the Resource Manager.</description>
