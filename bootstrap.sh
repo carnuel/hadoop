@@ -58,7 +58,6 @@ function terminate()
 args=( $@ )
 args_len=$(( ${#args[@]} ))
 # Variables
-mode="" 		# mode
 known_hosts=()		# List of all hosts
 shell=""		# Shell that should open when container starts
 
@@ -67,20 +66,6 @@ end_script=false
 for (( i=0; i<$args_len; i++ ))
 do
         case ${args[$i]}  in
-                "-master")
-			if [[ $mode == "-slave" ]]; then
-				log 3 "Started bootstrap.sh with arguments -master and -slave. Choose only one."
-				end_script=true
-			fi
-			mode="-master"
-                        ;;
-		"-slave")
-                        if [[ $mode == "-master" ]]; then
-                                log 3 "Started bootstrap.sh with arguments -master and -slave. Choose only one."
-                                end_script=true
-                        fi
-                        mode="-slave"
-                        ;;
 		"-config")
 			if [[ $(( ${#known_hosts[@]} )) > 0 ]]; then
 				log 3 "Multiple cluster configurations assigned. Please assign only one."
@@ -114,10 +99,6 @@ terminate $end_script
 
 # Check parameters
 end_script=false
-if [[ $mode == "" ]]; then
-	log 3 "No mode chosen (-slave or -master)."
-	end_script=true
-fi
 if [[ $(( ${#known_hosts[@]} )) == 0 ]]; then
 	log 3 "No cluster configuration assigned (-config)."
 	end_script=true
@@ -222,21 +203,13 @@ log 0 "SSH started."
 var_ip="$(ifconfig | grep -A 1 'eth0' | tail -1 | cut -d ':' -f 2 | cut -d ' ' -f 1)"
 
 # Start editing /etc/hosts in a temporary file
+# Add second localhost hostname
 # Remove 127.0.1.1
-sed "s/127.0.1.1/$var_ip/" /etc/hosts > /tmp/hosts
+sed -e "s/127.0.1.1/$var_ip/" -e '/127.0.0.1/c 127.0.0.1\tlocalhost\tlocalhost' /etc/hosts > /tmp/hosts
 log 0 "Changed 127.0.1.1 to $var_ip."
 
-# Create the master entry for /etc/hosts
-master_entry=$(printf "$master_ip\t$master_hostname")
-
 # Set master mode
-if [[ $mode == "-master" ]]; then
-	# End script if the master host configuration is not set correctly to this machine.
-	if [[ $master_ip != $var_ip ]]; then
-		log 3 "Tried to start the master host on the wrong machine. Check the cluster configuration."
-		terminate true
-	fi
-
+if [[ $var_ip == $master_ip ]]; then
 	# Add all slaves to /etc/hosts
 	for slave_entry in  "${slaves[@]}"
         do
@@ -257,12 +230,10 @@ if [[ $mode == "-master" ]]; then
         $HADOOP_PREFIX/sbin/yarn-daemon.sh start resourcemanager
 	log 0 "Resourcemanager started."
 # Set slave mode
-elif [[ $mode == "-slave" ]]; then
-        # End script if the master host configuration is set wrongly to this machine.
-        if [[ $master_ip == $var_ip ]]; then
-                log 3 "Tried to start a slave host on the wrong machine. Check the cluster configuration."
-                terminate true
-        fi
+else
+	# Create the master entry for /etc/hosts
+	master_entry=$(printf "$master_ip\t$master_hostname")
+
 	# Add the master host to /etc/hosts
         echo "${master_entry}" >> /tmp/hosts
 	log 0 "$master_entry added to /tmp/hosts."
