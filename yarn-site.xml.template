@@ -44,5 +44,10 @@
         <value>mapreduce_shuffle</value>
         <description>shuffle service that needs to be set for Map Reduce to run </description>
     </property>
+    <property>
+        <name>yarn.nodemanager.vmem-check-enabled</name>
+        <value>false</value>
+        <description>Whether virtual memory limits will be enforced for containers.</description>
+    </property>
 </configuration>
 
