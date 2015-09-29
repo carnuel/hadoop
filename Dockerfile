@@ -24,6 +24,7 @@ ADD core-site.xml.template $HADOOP_PREFIX/etc/hadoop/core-site.xml.template
 ADD hdfs-site.xml $HADOOP_PREFIX/etc/hadoop/hdfs-site.xml
 ADD mapred-site.xml $HADOOP_PREFIX/etc/hadoop/mapred-site.xml
 ADD yarn-site.xml.template $HADOOP_PREFIX/etc/hadoop/yarn-site.xml.template
+ADD mapred-site.xml.template $HADOOP_PREFIX/etc/hadoop/mapred-site.xml.template
 
 # SSH config
 ADD ssh_config /root/.ssh/config
