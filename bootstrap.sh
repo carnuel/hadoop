@@ -1,5 +1,7 @@
-#!/bin/bash -e
-# Turned on -e mode to exit script on errors
+#!/bin/bash
+
+# Static global variables
+CONFIG_FILE="/mnt/cluster.cnf"
 
 # Helper functions
 # Check if a given ip is in a valid format
@@ -50,67 +52,21 @@ function terminate()
 {
 	if [[ $1 == true ]]; then
         	log 0 "Ending script."
-		false
+		exit 0
 	fi
 }
 
-# Save all args in a array
-args=( $@ )
-args_len=$(( ${#args[@]} ))
-# Variables
-known_hosts=()		# List of all hosts
-shell=""		# Shell that should open when container starts
-
 end_script=false
-# Iterate through array and set all variables e.g. identify mode (-master or -slave)
-for (( i=0; i<$args_len; i++ ))
-do
-        case ${args[$i]}  in
-		"-config")
-			if [[ $(( ${#known_hosts[@]} )) > 0 ]]; then
-				log 3 "Multiple cluster configurations assigned. Please assign only one."
-                                end_script=true
-			fi
-			# Add all following host string to the array, as long as end is not yet reached or no new options has appeared
-			while [[ $args_len > $i+1 && ${args[$i+1]} != \-* && $end_script == false ]]; do
-				known_hosts[$(( ${#known_hosts[@]} ))]=${args[$i+1]}
-				((i++))
-			done
-			;;
-		"-bash")
-			if [[ $shell != "" ]]; then
-                                log 3 "Multiple starting arguments (-d or -shell). Please assign only one."
-                                end_script=true
-                        fi
-			shell="-bash"
-			;;
-		"-d")
-			if [[ $shell != "" ]]; then
-				log 3 "Multiple starting arguments (-d or -shell). Please assign only one."
-                                end_script=true
-			fi
-			shell="-d"
-			;;
-	esac
-done
-
-# End script if the parameter usage is wrong
-terminate $end_script
-
-# Check parameters
-end_script=false
-if [[ $(( ${#known_hosts[@]} )) == 0 ]]; then
-	log 3 "No cluster configuration assigned (-config)."
+# Check if cluster.cnf exists
+if [ ! -f $CONFIG_FILE ]; then
+	log 3 "No cluster configuration found at /mnt/cluster.cnf."
 	end_script=true
 fi
-if [[ $shell == "" ]]; then
-        log 3 "No starting argument (-d or -bash). Please assign one."
-        end_script=true
+if [[ $1 != "-bash" && $1 != "-d" ]]; then
+	log 3 "Not started with -bash or -d."
+	end_script=true
 fi
-
-# End script if one of the above variables is missing
 terminate $end_script
-
 # Variables
 master_hostname=""      # Master hostname
 master_ip=""            # Master IP
@@ -118,7 +74,7 @@ delimiter=";"           # Delimiter to split host string
 slaves=()		# Slave host string for /etc/hosts
 
 # Process cluster configuration
-for host in "${known_hosts[@]}"
+for host in $(cat $CONFIG_FILE)
 do
         # e.g. 136.199.51.110;ssds110.dbnet.syssoft.uni-trier.de;master
         # Host options
@@ -142,7 +98,7 @@ do
 			host_type=${host_split[2]}
 		fi
 	else
-                log 3 "Cluster configuration for $host contains too little options (ip;hostname;?type). Remove or extend host options."
+                log 3 "Cluster configuration for $host contains too little options (ip;hostname;?type). Remove or extend the host options."
                 end_script=true
 	fi
 
@@ -253,8 +209,8 @@ fi
 
 # Run container
 log 0 "Running container ..."
-if [[ $shell == "-d" ]]; then
+if [[ $1 == "-d" ]]; then
 	while true; do sleep 1000; done
-elif [[ $shell == "-bash" ]]; then
+elif [[ $1 == "-bash" ]]; then
 	/bin/bash
 fi
