@@ -178,6 +178,7 @@ if [[ $var_ip == $master_ip ]]; then
 
 	# Replace the original /etc/hosts
         cp /tmp/hosts /etc/hosts
+	rm /tmp/hosts
 	log 0 "Replaced /etc/hosts."
 
 	# Formatting namenode, starting namenode and resourcemanager
@@ -196,9 +197,10 @@ else
         echo "${master_entry}" >> /tmp/hosts
 	log 0 "$master_entry added to /tmp/hosts."
 
-	 # Replace the original /etc/hosts
+	# Replace the original /etc/hosts
         cp /tmp/hosts /etc/hosts
-        log 0 "Replaced /etc/hosts."
+        rm /tmp/hosts
+	log 0 "Replaced /etc/hosts."
 
 	# Starting datanode and nodemanager
 	$HADOOP_PREFIX/sbin/hadoop-daemon.sh start datanode
