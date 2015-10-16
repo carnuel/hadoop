@@ -67,11 +67,19 @@ if [[ $1 != "-bash" && $1 != "-d" ]]; then
 	end_script=true
 fi
 terminate $end_script
+
 # Variables
-master_hostname=""      # Master hostname
 master_ip=""            # Master IP
 delimiter=";"           # Delimiter to split host string
-slaves=()		# Slave host string for /etc/hosts
+# ip of this host
+this_host_ip="$(ifconfig | grep -A 1 'eth0' | tail -1 | cut -d ':' -f 2 | cut -d ' ' -f 1)"
+
+# Start editing /etc/hosts in a temporary file
+# Add second localhost hostname
+# Remove 127.0.1.1
+sed -e "s/127.0.1.1/$this_host_ip/" -e '/127.0.0.1/c 127.0.0.1\tlocalhost\tlocalhost' /etc/hosts > /tmp/hosts
+log 0 "Changed 127.0.1.1 to $this_host_ip."
+log 0 "Added second localhost tag to 127.0.0.1."
 
 # Process cluster configuration
 for host in $(cat $CONFIG_FILE)
@@ -97,9 +105,6 @@ do
 		if [[ $host_split_len > 2 ]]; then
 			host_type=${host_split[2]}
 		fi
-	else
-                log 3 "Cluster configuration for $host contains too little options (ip;hostname;?type). Remove or extend the host options."
-                end_script=true
 	fi
 
 	# Check host options
@@ -107,80 +112,53 @@ do
 		log 3 "$host is no valid ip. Check cluster configuration."
 		end_script=true
         fi
-        if [[ $host_ip == "" ]]; then
+        if [[ $host_name == "" ]]; then
 		log 3 "No hostname for host $host."
 		end_script=true
         fi
 
 	# In case of type master set the master ip and hostname.
 	if [[ $host_type == "master" ]]; then
-		if [[ $master_ip == "" && $master_hostname == "" ]]; then
+		if [[ $master_ip == "" ]]; then
 			master_ip=$host_ip
-			master_hostname=$host_name
 		else
 			log 3 "Multiple master hosts assigned. Check cluster configuration."
 			end_script=true
 		fi
-	# In other cases add a new slave to the array
-	else
-		slaves[$(( ${#slaves[@]} ))]=$(printf "$host_ip\t$host_name")
 	fi
-	# End script when ip or hostname is missing or invalid or when there are multiple master hosts chosen.
+	# End script when ip or hostname are missing or invalid or when there are multiple master hosts chosen.
         terminate $end_script
-done
 
-end_script=false
-# Check master options
+	# Add host to /tmp/hosts
+	if [[ $this_host_ip != $host_ip ]]; then
+		host_entry=$(printf "$host_ip\t$host_name")
+        	echo "$host_entry" >> /tmp/hosts
+		log 0 "$host_entry added to /tmp/hosts."
+	fi
+done
+# Replace the original /etc/hosts
+cp /tmp/hosts /etc/hosts
+rm /tmp/hosts
+log 0 "Replaced /etc/hosts by newly created /tmp/hosts."
+
+# End if no master has been assigned.
 if [[ $master_ip == "" ]]; then
 	log 3 "No master ip assigend."
-	end_script=true
+	terminate true
 fi
-if [[ $master_hostname == "" ]]; then
-        log 3 "No master hostname assigned."
-        end_script=true
-fi
-if [[ $(( ${#slaves[@]} )) == 0 ]]; then
-	log 3 "No slaves assigned."
-	end_script=true
-fi
-# End script if no master or slaves are given
-terminate $end_script
 
 # Edit xml.templates
 sed s/HOSTNAME/$master_ip/ $HADOOP_PREFIX/etc/hadoop/core-site.xml.template > $HADOOP_PREFIX/etc/hadoop/core-site.xml
 sed s/HOSTNAME/$master_hostname/ $HADOOP_PREFIX/etc/hadoop/yarn-site.xml.template > $HADOOP_PREFIX/etc/hadoop/yarn-site.xml
 sed s/HOSTNAME/$master_hostname/ $HADOOP_PREFIX/etc/hadoop/mapred-site.xml.template > $HADOOP_PREFIX/etc/hadoop/mapred-site.xml
-
 log 0 "XML templates edited."
 
 # Start ssh
 service ssh start
 log 0 "SSH started."
 
-# ip of this host
-var_ip="$(ifconfig | grep -A 1 'eth0' | tail -1 | cut -d ':' -f 2 | cut -d ' ' -f 1)"
-
-# Start editing /etc/hosts in a temporary file
-# Add second localhost hostname
-# Remove 127.0.1.1
-sed -e "s/127.0.1.1/$var_ip/" -e '/127.0.0.1/c 127.0.0.1\tlocalhost\tlocalhost' /etc/hosts > /tmp/hosts
-log 0 "Changed 127.0.1.1 to $var_ip."
-
 # Set master mode
-if [[ $var_ip == $master_ip ]]; then
-	# Add all slaves to /etc/hosts
-	for slave_entry in  "${slaves[@]}"
-        do
-		# Add slave host to /etc/hosts
-		echo "${slave_entry}" >> /tmp/hosts
-		log 0 "$slave_entry added to /tmp/hosts."
-        done
-
-	# Replace the original /etc/hosts
-        cp /tmp/hosts /etc/hosts
-	rm /tmp/hosts
-	log 0 "Replaced /etc/hosts."
-
+if [[ $this_host_ip == $master_ip ]]; then
 	# Formatting namenode, starting namenode and resourcemanager
         $HADOOP_PREFIX/bin/hdfs namenode -format -force
 	log 0 "Namenode formatted."
@@ -190,18 +168,6 @@ if [[ $var_ip == $master_ip ]]; then
 	log 0 "Resourcemanager started."
 # Set slave mode
 else
-	# Create the master entry for /etc/hosts
-	master_entry=$(printf "$master_ip\t$master_hostname")
-
-	# Add the master host to /etc/hosts
-        echo "${master_entry}" >> /tmp/hosts
-	log 0 "$master_entry added to /tmp/hosts."
-
-	# Replace the original /etc/hosts
-        cp /tmp/hosts /etc/hosts
-        rm /tmp/hosts
-	log 0 "Replaced /etc/hosts."
-
 	# Starting datanode and nodemanager
 	$HADOOP_PREFIX/sbin/hadoop-daemon.sh start datanode
         log 0 "Datanode started."
