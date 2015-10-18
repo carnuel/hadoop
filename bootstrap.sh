@@ -70,6 +70,7 @@ terminate $end_script
 
 # Variables
 master_ip=""            # Master IP
+master_hostname=""	# Master Hostname
 delimiter=";"           # Delimiter to split host string
 # ip of this host
 this_host_ip="$(ifconfig | grep -A 1 'eth0' | tail -1 | cut -d ':' -f 2 | cut -d ' ' -f 1)"
@@ -119,8 +120,9 @@ do
 
 	# In case of type master set the master ip and hostname.
 	if [[ $host_type == "master" ]]; then
-		if [[ $master_ip == "" ]]; then
+		if [[ $master_ip == "" && $master_hostname == "" ]]; then
 			master_ip=$host_ip
+			master_hostname=$host_name
 		else
 			log 3 "Multiple master hosts assigned. Check cluster configuration."
 			end_script=true
@@ -136,16 +138,23 @@ do
 		log 0 "$host_entry added to /tmp/hosts."
 	fi
 done
+
 # Replace the original /etc/hosts
 cp /tmp/hosts /etc/hosts
 rm /tmp/hosts
 log 0 "Replaced /etc/hosts by newly created /tmp/hosts."
 
+end_script=false
 # End if no master has been assigned.
 if [[ $master_ip == "" ]]; then
 	log 3 "No master ip assigend."
-	terminate true
+	end_script=true
 fi
+if [[ $master_hostname == "" ]]; then
+        log 3 "No master hostname assigend."
+        end_script=true
+fi
+terminate $end_script
 
 # Edit xml.templates
 sed s/HOSTNAME/$master_ip/ $HADOOP_PREFIX/etc/hadoop/core-site.xml.template > $HADOOP_PREFIX/etc/hadoop/core-site.xml
