@@ -2,6 +2,10 @@
 
 # Static global variables
 CONFIG_FILE="/mnt/cluster.cnf"
+YARN_SITE="/mnt/yarn-site.xml.template"
+MAPRED_SITE="/mnt/mapred-site.xml.template"
+CORE_SITE="/mnt/core-site.xml.template"
+HDFS_SITE="/mnt/hdfs-site.xml"
 
 # Helper functions
 # Check if a given ip is in a valid format
@@ -74,7 +78,8 @@ master_hostname=""	# Master Hostname
 delimiter=";"           # Delimiter to split host string
 # ip of this host
 this_host_ip="$(ifconfig | grep -A 1 'eth0' | tail -1 | cut -d ':' -f 2 | cut -d ' ' -f 1)"
-
+echo $this_host_ip
+exit 0
 # Start editing /etc/hosts in a temporary file
 # Add second localhost hostname
 # Remove 127.0.1.1
@@ -157,9 +162,10 @@ fi
 terminate $end_script
 
 # Edit xml.templates
-sed s/HOSTNAME/$master_ip/ $HADOOP_PREFIX/etc/hadoop/core-site.xml.template > $HADOOP_PREFIX/etc/hadoop/core-site.xml
-sed s/HOSTNAME/$master_hostname/ $HADOOP_PREFIX/etc/hadoop/yarn-site.xml.template > $HADOOP_PREFIX/etc/hadoop/yarn-site.xml
-sed s/HOSTNAME/$master_hostname/ $HADOOP_PREFIX/etc/hadoop/mapred-site.xml.template > $HADOOP_PREFIX/etc/hadoop/mapred-site.xml
+sed s/HOSTNAME/$master_ip/ $CORE_SITE > $HADOOP_PREFIX/etc/hadoop/core-site.xml
+sed s/HOSTNAME/$master_hostname/ $YARN_SITE > $HADOOP_PREFIX/etc/hadoop/yarn-site.xml
+sed s/HOSTNAME/$master_hostname/ $MAPRED_SITE > $HADOOP_PREFIX/etc/hadoop/mapred-site.xml
+cp $HDFS_SITE $HADOOP_PREFIX/etc/hadoop/hdfs-site.xml
 log 0 "XML templates edited."
 
 # Start ssh
