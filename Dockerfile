@@ -24,12 +24,14 @@ RUN sed -i '/^export JAVA_HOME/ s:.*:export JAVA_HOME=/usr/java/default\nexport 
 #COPY yarn-site.xml.template $HADOOP_PREFIX/etc/hadoop/yarn-site.xml.template
 #COPY mapred-site.xml.template $HADOOP_PREFIX/etc/hadoop/mapred-site.xml.template
 #COPY bootstrap.sh /etc/bootstrap.sh
+COPY run.sh /etc/run.sh
 
 # Set permissions
 #RUN chown root:root /etc/bootstrap.sh && chmod 700 /etc/bootstrap.sh
+RUN chown root:root /etc/run.sh && chmod 700 /etc/run.sh
 
 # Set environment variable
-ENV BOOTSTRAP /mnt/bootstrap.sh
+ENV BOOTSTRAP /etc/bootstrap.sh
 
-ENTRYPOINT ["/mnt/bootstrap.sh"]
+ENTRYPOINT ["/etc/run.sh"]
 CMD ["-d"]
