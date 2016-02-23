@@ -1,4 +1,4 @@
-FROM carnuel/ubuntu:latest
+FROM carnuel/ubuntu:15.10
 MAINTAINER carnuel
 USER root
 
